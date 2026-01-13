@@ -576,7 +576,7 @@ impl Proc {
                 println!("{}: syscall {} -> {}", pid, SYSCALL_NAMES[num], ret_val);
             }
         }
-    }
+    } 
 
     /// # 功能说明
     /// 让出当前进程的 CPU 使用权，将进程状态从运行中（RUNNING）
