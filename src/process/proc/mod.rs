@@ -522,10 +522,10 @@ impl Proc {
     pub fn syscall(&mut self) {
         sstatus::intr_on();
         let pdata = self.data.get_mut();
-        let tf = unsafe { self.data.get_mut().tf.as_mut().unwrap() };
+        let tf = unsafe { pdata.tf.as_mut().unwrap() };
         let num = tf.a7 as usize;
         tf.admit_ecall();
-        let sys_result = match a7 {
+        let sys_result = match num {
             1 => self.sys_fork(),
             2 => self.sys_exit(),
             3 => self.sys_wait(),
@@ -724,6 +724,7 @@ impl Proc {
         // clone opened files and cwd
         cdata.open_files.clone_from(&pdata.open_files);
         cdata.cwd.clone_from(&pdata.cwd);
+
         cdata.trace_mask = pdata.trace_mask;
         
         // copy process name

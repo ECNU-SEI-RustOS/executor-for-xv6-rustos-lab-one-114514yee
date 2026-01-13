@@ -501,13 +501,10 @@ impl Syscall for Proc {
     }
 
     fn sys_trace(&mut self)->SysResult{
-        let mask = self.arg_int(0)?;
-        let guard = self.excl.lock();
-        let data = self.data.get_mut();
-        data.trace_mask = mask;
-
-        drop(guard);
-        0
+        let mask = self.arg_i32(0)?;
+        let pdata = self.data.get_mut();
+        pdata.trace_mask = mask;
+        OK(0)
     }
 }
 
