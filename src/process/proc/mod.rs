@@ -102,6 +102,7 @@ pub struct ProcData {
     pub pagetable: Option<Box<PageTable>>,
     /// 进程当前工作目录的 inode。
     pub cwd: Option<Inode>,
+    pub trace_mask:i32,
 }
 
 
@@ -116,6 +117,7 @@ impl ProcData {
             tf: ptr::null_mut(),
             pagetable: None,
             cwd: None,
+            trace_mask:0,
         }
     }
 
@@ -492,11 +494,36 @@ impl Proc {
     /// - 使用了 `unsafe` 获取 TrapFrame 裸指针，假设指针有效且唯一所有权。
     /// - 该函数应在内核上下文且进程排他访问时调用，避免数据竞争。
     /// - 系统调用执行过程中可能包含更底层的 `unsafe`，调用此函数时需确保整体安全环境。
+    static SYSCALL_NAMES: [&str; 23] = [
+    "",        // 0 占位
+    "fork",    // 1
+    "exit",    // 2
+    "wait",    // 3
+    "pipe",    // 4
+    "read",    // 5
+    "kill",    // 6
+    "exec",    // 7
+    "fstat",   // 8
+    "chdir",   // 9
+    "dup",     // 10
+    "getpid",  // 11
+    "sbrk",    // 12
+    "sleep",   // 13
+    "uptime",  // 14
+    "open",    // 15
+    "write",   // 16
+    "mknod",   // 17
+    "unlink",  // 18
+    "link",    // 19
+    "mkdir",   // 20
+    "close",   // 21
+    "trace",   // 22
+    ];
     pub fn syscall(&mut self) {
         sstatus::intr_on();
-
+        let pdata = self.data.get_mut();
         let tf = unsafe { self.data.get_mut().tf.as_mut().unwrap() };
-        let a7 = tf.a7;
+        let num = tf.a7 as usize;
         tf.admit_ecall();
         let sys_result = match a7 {
             1 => self.sys_fork(),
@@ -520,14 +547,24 @@ impl Proc {
             19 => self.sys_link(),
             20 => self.sys_mkdir(),
             21 => self.sys_close(),
+            22=>self.sys_trace(),
             _ => {
                 panic!("unknown syscall num: {}", a7);
             }
         };
-        tf.a0 = match sys_result {
-            Ok(ret) => ret,
-            Err(()) => -1isize as usize,
+        let ret_val: isize = match sys_result {
+        Ok(ret) => ret as isize,
+        Err(()) => -1,
         };
+        tf.a0 = ret_val as usize;
+        let mask = pdata.trace_mask as u32;
+        if num < SYSCALL_NAMES.len() {
+            let bit = 1u32 << (num as u32);
+            if (mask & bit) != 0 {
+                let pid = { self.excl.lock().pid };
+                println!("{}: syscall {} -> {}", pid, SYSCALL_NAMES[num], ret_val);
+            }
+        }
     }
 
     /// # 功能说明
@@ -687,6 +724,7 @@ impl Proc {
         // clone opened files and cwd
         cdata.open_files.clone_from(&pdata.open_files);
         cdata.cwd.clone_from(&pdata.cwd);
+        cdata.trace_mask = pdata.trace_mask;
         
         // copy process name
         cdata.name.copy_from_slice(&pdata.name);
