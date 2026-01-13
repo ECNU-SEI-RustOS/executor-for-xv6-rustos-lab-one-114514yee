@@ -504,7 +504,7 @@ impl Syscall for Proc {
         let mask = self.arg_i32(0)?;
         let pdata = self.data.get_mut();
         pdata.trace_mask = mask;
-        OK(0)
+        Ok(0)
     }
 }
 

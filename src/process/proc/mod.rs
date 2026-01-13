@@ -549,7 +549,7 @@ impl Proc {
             21 => self.sys_close(),
             22=>self.sys_trace(),
             _ => {
-                panic!("unknown syscall num: {}", a7);
+                panic!("unknown syscall num: {}", num);
             }
         };
         let ret_val: isize = match sys_result {
