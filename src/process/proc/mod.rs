@@ -25,6 +25,32 @@ use self::syscall::Syscall;
 mod syscall;
 mod elf;
 
+static SYSCALL_NAMES: [&str; 23] = [
+    "",        // 0 占位
+    "fork",    // 1
+    "exit",    // 2
+    "wait",    // 3
+    "pipe",    // 4
+    "read",    // 5
+    "kill",    // 6
+    "exec",    // 7
+    "fstat",   // 8
+    "chdir",   // 9
+    "dup",     // 10
+    "getpid",  // 11
+    "sbrk",    // 12
+    "sleep",   // 13
+    "uptime",  // 14
+    "open",    // 15
+    "write",   // 16
+    "mknod",   // 17
+    "unlink",  // 18
+    "link",    // 19
+    "mkdir",   // 20
+    "close",   // 21
+    "trace",   // 22
+    ];
+
 /// 进程状态枚举类型，表示操作系统内核中进程的不同生命周期状态。
 ///
 /// 该枚举用于进程调度与管理，反映进程当前的执行或等待状态，
@@ -494,31 +520,6 @@ impl Proc {
     /// - 使用了 `unsafe` 获取 TrapFrame 裸指针，假设指针有效且唯一所有权。
     /// - 该函数应在内核上下文且进程排他访问时调用，避免数据竞争。
     /// - 系统调用执行过程中可能包含更底层的 `unsafe`，调用此函数时需确保整体安全环境。
-    static SYSCALL_NAMES: [&str; 23] = [
-    "",        // 0 占位
-    "fork",    // 1
-    "exit",    // 2
-    "wait",    // 3
-    "pipe",    // 4
-    "read",    // 5
-    "kill",    // 6
-    "exec",    // 7
-    "fstat",   // 8
-    "chdir",   // 9
-    "dup",     // 10
-    "getpid",  // 11
-    "sbrk",    // 12
-    "sleep",   // 13
-    "uptime",  // 14
-    "open",    // 15
-    "write",   // 16
-    "mknod",   // 17
-    "unlink",  // 18
-    "link",    // 19
-    "mkdir",   // 20
-    "close",   // 21
-    "trace",   // 22
-    ];
     pub fn syscall(&mut self) {
         sstatus::intr_on();
         let pdata = self.data.get_mut();
