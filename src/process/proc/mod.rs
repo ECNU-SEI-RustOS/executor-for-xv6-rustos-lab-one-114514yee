@@ -522,10 +522,16 @@ impl Proc {
     /// - 系统调用执行过程中可能包含更底层的 `unsafe`，调用此函数时需确保整体安全环境。
     pub fn syscall(&mut self) {
         sstatus::intr_on();
-        let pdata = self.data.get_mut();
-        let tf = unsafe { pdata.tf.as_mut().unwrap() };
-        let num = tf.a7 as usize;
-        tf.admit_ecall();
+        let (num, mask) = {
+            let pdata = self.data.get_mut();
+            let tf = unsafe { pdata.tf.as_mut().unwrap() };
+
+            let num = tf.a7 as usize;
+            tf.admit_ecall();
+
+            let mask = pdata.trace_mask as u32;
+            (num, mask)
+        }; 
         let sys_result = match num {
             1 => self.sys_fork(),
             2 => self.sys_exit(),
@@ -554,11 +560,14 @@ impl Proc {
             }
         };
         let ret_val: isize = match sys_result {
-        Ok(ret) => ret as isize,
-        Err(()) => -1,
+            Ok(ret) => ret as isize,
+            Err(()) => -1,
         };
-        tf.a0 = ret_val as usize;
-        let mask = pdata.trace_mask as u32;
+        {
+            let pdata = self.data.get_mut();
+            let tf = unsafe { pdata.tf.as_mut().unwrap() };
+            tf.a0 = ret_val as usize;
+        }
         if num < SYSCALL_NAMES.len() {
             let bit = 1u32 << (num as u32);
             if (mask & bit) != 0 {
